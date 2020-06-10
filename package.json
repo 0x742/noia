@@ -1,0 +1,38 @@
+{
+  "name": "noia",
+  "version": "1.0.0",
+  "description": "Simple Android application sandbox file browser tool to directly preview SQLite databases, images, XML files and more. Powered by [frida.re](https://www.frida.re).",
+  "main": "app.js",
+  "bin": "cli.js",
+  "keywords": [
+    "Android",
+    "frida"
+  ],
+  "dependencies": {
+    "archiver": "^4.0.1",
+    "body-parser": "^1.19.0",
+    "ejs": "^3.0.2",
+    "express": "^4.17.1",
+    "file-type": "^14.1.4",
+    "frida": "^12.8.19",
+    "frida-compile": "^9.3.0",
+    "frida-fs": "^3.0.1",
+    "mustache": "^4.0.1",
+    "stylelint": "^13.6.0",
+    "stylelint-config-standard": "^20.0.0",
+    "tmp": "^0.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/0x742/noia.git"
+  },
+  "author": "0x7421",
+  "bugs": {
+    "url": "https://github.com/0x742/noia/issues"
+  },
+  "license": "MIT"
+}

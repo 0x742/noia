@@ -1,0 +1,65 @@
+<html>
+    <head>
+        <title>Noia</title>
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
+        <link rel="stylesheet" href="/static/style.css">
+        <link href="/static/freeze-ui.min.css" type="text/css" rel="stylesheet"/>
+        <script type="text/javascript" src="/static/freeze-ui.min.js"></script>
+        <script type="text/javascript" src="/static/script.js"></script>
+        <script type="text/javascript">
+            window.onload = function() {
+                const device_id = "<%= device_id %>";
+                let apps = {};
+                const apps_element = document.querySelector(".apps");
+                let query_element = document.querySelector(".query");
+
+                query_element.addEventListener("input", function() {
+                    if(Object.keys(apps).length > 0) {
+                        loadApps(apps, query_element.value.toLowerCase());
+                    }
+                });
+                function loadApps(apps, query) {
+                    let apps_html = '';
+                    for (const [ app_identifier, app_name ] of Object.entries(apps)) {
+                        if(app_name.toLowerCase().includes(query) || app_identifier.includes(query)) {
+                            apps_html += `
+                            <div class="box">
+                                <div class="icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                </div>
+                                <h5 class="heading">${app_name}</h5>
+                                <p class="text">${app_identifier}</p>
+                               <a class="link" href="/device/${device_id}/package/${app_identifier}">Explore</a>
+                            </div>`;
+                        }
+                    }
+                    apps_element.innerHTML = apps_html;
+                }
+
+                httpRequest(`/api/device/${device_id}`, function(data) {
+                    document.querySelector(".header").innerText = `${data.device.name} (${data.device.id})`;
+                });
+                httpRequest(`/api/device/${device_id}/apps`, function(data) {
+                    data.forEach(function(item) {
+                        apps[item.identifier] = item.name;
+                    });
+                    loadApps(apps, query_element.value);
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <div class="main_container">
+            <div class="header">{{device_name}}</div>
+            <div class="center">
+                <div class="search-box">
+                    <label>
+                        <input type="search" class="query" placeholder="Search..." />
+                    </label>
+                </div>
+                <div class="apps"></div>
+            </div>
+            <div class="footer-text">Made with <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> by <a href="https://github.com/0x742" target="_blank">Raz</a></div>
+        </div>
+    </body>
+</html>
