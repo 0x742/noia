@@ -130,12 +130,14 @@ async function get_frida_script(device_id, package_identifier, res) {
 	if(!Object.keys(session_scripts).includes(`${device_id}:${package_identifier}`)) {
 		const device = await frida.getDevice(device_id);
 		let session;
+		let pid = -1;
 		try {
 			session = await device.attach(package_identifier);
 		}
 		catch(e) {
 			try {
-				session = await device.spawn(package_identifier);
+				pid = await device.spawn(package_identifier);
+				session = await device.attach(pid);
 			}
 			catch(e) {
 				return {"error": e.message};
@@ -144,6 +146,9 @@ async function get_frida_script(device_id, package_identifier, res) {
 		const script = await session.createScript(source);
 		script.message.connect(onMessage);
 		await script.load();
+		if(pid > -1) { // if the application was spawned we should resume it
+			device.resume(session.pid);
+		}
 		session_scripts[`${device_id}:${package_identifier}`] = script;
 	}
 	return session_scripts[`${device_id}:${package_identifier}`];
