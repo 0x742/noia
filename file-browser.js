@@ -17,6 +17,14 @@ function getNativeFunction(name, returnType, args) {
 	return new NativeFunction(Module.findExportByName(null, name), returnType, args);
 }
 
+/* POSIX requires that a file size be printed without a sign, even
+   when negative.  Assume the typical case where negative sizes are
+   actually positive values that have wrapped around.  */
+function unsigned_file_size(size) {
+	return size + (size < 0) * (Number.MAX_SAFE_INTEGER - Number.MIN_SAFE_INTEGER + 1);
+}
+
+
 rpc.exports = {
 	isFile: function(path) {
 		return new Promise(function(resolve) {
@@ -33,6 +41,7 @@ rpc.exports = {
 			throw new Error('error open file');
 
 		var fileSize = nativeApi.lseek(fd, 0, SEEK_END).valueOf();
+		fileSize = unsigned_file_size(fileSize);
 		nativeApi.lseek(fd, 0, SEEK_SET);
 		if(size === 0 || size > fileSize) {
 			size = fileSize;

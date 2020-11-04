@@ -82,7 +82,15 @@ app.post('/api/device/:device/package/:identifier', async function(req, res) {
 		return res.send({});
 	}
 	const action = req.body.action;
-	const frida_script = await get_frida_script(device_id, identifier, res);
+	let frida_script = null;
+	try {
+		frida_script = await get_frida_script(device_id, identifier, res);
+	}
+	catch (e) {
+		console.error(e);
+		res.send({"error": e.message});
+		return;
+	}
 	let resp = null;
 	let errorListener = (message) => {
 		if(!resp) // if handle command failed resp is null
@@ -150,6 +158,18 @@ async function get_frida_script(device_id, package_identifier, res) {
 			device.resume(session.pid);
 		}
 		session_scripts[`${device_id}:${package_identifier}`] = script;
+	}
+	else {
+		// check if session script is still active
+		try {
+			let dummy = await session_scripts[`${device_id}:${package_identifier}`].exports.getPackageInfo();
+		}
+		catch (e) {
+			console.error(e);
+			console.log(`deleting ${device_id}:${package_identifier} from session_scripts dict because script is destroyed`);
+			delete session_scripts[`${device_id}:${package_identifier}`];
+			return await get_frida_script(device_id, package_identifier, res);
+		}
 	}
 	return session_scripts[`${device_id}:${package_identifier}`];
 }
@@ -231,7 +251,9 @@ async function handle_command(device_id, identifier, action, params, frida_scrip
 			resp = {
 				"filename": getFilename(path),
 				"type": file_type,
-				"content": String.fromCharCode.apply(null, fileContent)
+				"content": new TextDecoder("utf-8").decode(fileContent)
+				// RangeError: Maximum call stack size exceeded
+				// "content": String.fromCharCode.apply(null, fileContent)
 			}
 		} else {
 			async function archiveDirectory(path) {

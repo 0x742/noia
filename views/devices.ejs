@@ -9,11 +9,13 @@
             window.onload = function() {
                 httpRequest('/api/devices', function (data) {
                     const devices = document.querySelector(".devices");
+                    let counter = 0;
                     data.forEach(function(dev) {
                         console.log(dev);
                         if(dev.impl.type !== "usb") {
                             return;
                         }
+                        counter++;
                         console.log(dev.impl);
                         devices.innerHTML += `<div class="box">
 <div class="icon">
@@ -24,6 +26,9 @@
 <a class="link" href="/device/${dev.impl.id}/packages">Explore</a>
 </div>`;
                     });
+                    if(counter == 0) {
+                        displayError("No devices found");
+                    }
                 });
             };
         </script>

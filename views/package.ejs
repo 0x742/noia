@@ -242,6 +242,10 @@
                                     else if(type.startsWith("image")) {
                                         pre_element.innerHTML = `<img src="data:${type};base64,${btoa(data.content)}" alt="" />`;
                                     }
+                                    else if(/^[ -~\t\n\r]+$/.test(data.content)) { // check if content is printable
+                                        // pre_element.classList.add("text-align-left");
+                                        pre_element.innerHTML = data.content;
+                                    }
                                     else {
                                         pre_element.innerText = hexdump(data.content);
                                     }
