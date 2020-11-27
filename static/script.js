@@ -109,3 +109,30 @@ function path_navigator_tracker() {
         element.innerHTML = element.textContent;
     });
 }
+
+function init_nav_tracker() {
+    const path_nav = document.querySelector(".path-nav");
+    const paths = path_nav.innerText.split("/");
+
+    let res = '';
+    for(var i = 0; i < paths.length; i++) {
+        let filename = `${paths[i]}`;
+        let full_path = (i > 0) ? `${paths.slice(0, i).join("/")}/${filename}` : '/';
+        res += `<span class="navigate" id="path-${i}" data-path="${full_path}" data-filetype="directory">${filename}/</span>`;
+    }
+    document.querySelector(".path-nav").innerHTML = res;
+
+    path_nav.addEventListener("mousemove", event => {
+        let hovered_element = document.elementFromPoint(event.clientX, event.clientY);
+        let hovered_element_path_id = hovered_element.id.substr(5).valueOf(); // extract the path id
+        // now hover all the previous ones
+        for(let i = 0; i < document.querySelectorAll("span[id^=path]").length; i++) {
+            document.getElementById(`path-${i}`).style.textDecoration = (i <= hovered_element_path_id) ? 'underline' : 'none';
+        }
+    });
+    path_nav.addEventListener("mouseleave", event => {
+        for(let i = 0; i < document.querySelectorAll("span[id^=path]").length; i++) {
+            document.getElementById(`path-${i}`).style.textDecoration = 'none';
+        }
+    });
+}

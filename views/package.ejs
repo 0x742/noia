@@ -1,282 +1,389 @@
 <html>
-    <head>
-        <title>Noia</title>
-        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
-        <link rel="stylesheet" href="/static/style.css">
-        <link href="/static/freeze-ui.min.css" type="text/css" rel="stylesheet"/>
-        <script type="text/javascript" src="/static/freeze-ui.min.js"></script>
-        <script type="text/javascript" src="/static/script.js"></script>
-        <script type="text/javascript" src="/static/vkbeautify.js"></script>
-        <script type="text/javascript">
-            const device_id = "<%= device_id %>";
-            const package_identifier = '<%= package %>';
-            let files_table_tbody;
-            let device_info, package_info;
-            function getFilename(path, current_path) {
-                let res = path.substring(current_path.length);
-                if(res[0] === '/')
-                    res = res.substring(1);
-                return res;
-            }
-            function timeConverter(UNIX_timestamp){
-                const date = new Date(UNIX_timestamp);
-                return date.getDate() + '/' + date.getMonth() + '/' + date.getUTCFullYear()+ ' ' + date.getHours() + ':' + date.getUTCMinutes() + ':' + date.getUTCSeconds() ;
-            }
-            // source: https://web.archive.org/web/20120507054320/http://codeaid.net/javascript/convert-size-in-bytes-to-human-readable-format-(javascript)
-            function bytesToSize(bytes) {
-                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-                if (bytes === 0) return '0 Byte';
-                const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
-                return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
-            }
-            function itemToBadges(item) {
-                    const badges = {
-                        'filetype': '<span class="badge badge-filetype">{{file_type}}</span>',
-                        'readable': '<span class="badge badge-readable">Readable</span>',
-                        'writeable': '<span class="badge badge-writeable">Writeable</span>',
-                        'hidden': '<span class="badge badge-hidden">Hidden</span>',
-                        'executable': '<span class="badge badge-executable">Executable</span>',
-                    };
-                    let result = '';
-                    if(item.file_type !== null && item.file_type.length > 0) {
-                        result += badges['filetype'].replace("{{file_type}}", item.file_type) + ' ';
-                    }
-                    else {
-                        result += badges['filetype'].replace("{{file_type}}", "Directory") + ' ';
-                    }
-                    if(item.readable) {
-                        result += badges['readable'] + ' ';
-                    }
-                    if(item.writeable) {
-                        result += badges['writeable'] + ' ';
-                    }
-                    if(item.executable && item.isFile) {
-                        result += badges['executable'] + ' ';
-                    }
-                    if(item.isHidden) {
-                        result += badges['hidden'];
-                    }
-                    return result;
-            }
-            function getCurrentPath() {
-                return document.querySelector(".path_nav").innerText;
-            }
-            function navigateTo(path) {
-                FreezeUI();
-                // TODO:  something happens and it adds double slash so i need to fix it this is a temp fix
-                path = path.replace("//", "/");
-                document.querySelector(".path_nav").innerText = path;
-                path_navigator_tracker();
-                httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
-                    loadFiles(data);
-                }, { 'action': 'ls', 'path': path});
-            }
+<head>
+    <title>Noia</title>
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="/static/freeze-ui.min.css" type="text/css" rel="stylesheet"/>
+    <script type="text/javascript" src="/static/freeze-ui.min.js"></script>
+    <script type="text/javascript" src="/static/script.js"></script>
+    <script type="text/javascript" src="/static/vkbeautify.js"></script>
+    <script type="text/javascript">
+        const device_id = "<%= device_id %>";
+        const package_identifier = '<%= package %>';
+        let files_table_tbody;
+        let device_info, package_info;
 
-            function loadFiles(files) {
-                hideFileDisplay();
-                showFilesTable();
-                files_table_tbody.innerHTML = '';
-                files.forEach(function(item) {
-                    var row = files_table_tbody.insertRow();
-                    if(item.file_type !== null && item.file_type.length > 0) {
-                        row.insertCell(0).innerHTML = `<span class="navigate" data-path="${item.path}" data-filetype="${item.file_type}">${getFilename(item.path, getCurrentPath())}</a>`;
+        // atob is ASCII only.
+
+        /**
+         *
+         *  Base64 encode / decode
+         *  http://www.webtoolkit.info
+         *
+         **/
+        var Base64 = {
+
+            // private property
+            _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
+            // public method for encoding
+            , encode: function (input)
+            {
+                var output = "";
+                var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                input = Base64._utf8_encode(input);
+
+                while (i < input.length)
+                {
+                    chr1 = input.charCodeAt(i++);
+                    chr2 = input.charCodeAt(i++);
+                    chr3 = input.charCodeAt(i++);
+
+                    enc1 = chr1 >> 2;
+                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                    enc4 = chr3 & 63;
+
+                    if (isNaN(chr2))
+                    {
+                        enc3 = enc4 = 64;
                     }
-                    else {
-                        row.insertCell(0).innerHTML = `<span class="navigate" data-path="${item.path}" data-filetype="directory">${getFilename(item.path, getCurrentPath())}</a>`;
+                    else if (isNaN(chr3))
+                    {
+                        enc4 = 64;
                     }
-                    row.insertCell(1).innerHTML = timeConverter(parseInt(item.lastModified));
-                    row.insertCell(2).innerHTML = bytesToSize(parseInt(item.size));
-                    var badges = row.insertCell(3);
-                    badges.className = 'text-center';
-                    badges.innerHTML = itemToBadges(item);
-                    var actions = row.insertCell(4);
-                    actions.className = 'text-center';
-                    actions.innerHTML = `
+
+                    output = output +
+                        this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+                        this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+                } // Whend
+
+                return output;
+            } // End Function encode
+
+
+            // public method for decoding
+            ,decode: function (input)
+            {
+                var output = "";
+                var chr1, chr2, chr3;
+                var enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+                while (i < input.length)
+                {
+                    enc1 = this._keyStr.indexOf(input.charAt(i++));
+                    enc2 = this._keyStr.indexOf(input.charAt(i++));
+                    enc3 = this._keyStr.indexOf(input.charAt(i++));
+                    enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+                    chr1 = (enc1 << 2) | (enc2 >> 4);
+                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+                    chr3 = ((enc3 & 3) << 6) | enc4;
+
+                    output = output + String.fromCharCode(chr1);
+
+                    if (enc3 != 64)
+                    {
+                        output = output + String.fromCharCode(chr2);
+                    }
+
+                    if (enc4 != 64)
+                    {
+                        output = output + String.fromCharCode(chr3);
+                    }
+
+                } // Whend
+
+                output = Base64._utf8_decode(output);
+
+                return output;
+            } // End Function decode
+
+
+            // private method for UTF-8 encoding
+            ,_utf8_encode: function (string)
+            {
+                var utftext = "";
+                string = string.replace(/\r\n/g, "\n");
+
+                for (var n = 0; n < string.length; n++)
+                {
+                    var c = string.charCodeAt(n);
+
+                    if (c < 128)
+                    {
+                        utftext += String.fromCharCode(c);
+                    }
+                    else if ((c > 127) && (c < 2048))
+                    {
+                        utftext += String.fromCharCode((c >> 6) | 192);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                    else
+                    {
+                        utftext += String.fromCharCode((c >> 12) | 224);
+                        utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+
+                } // Next n
+
+                return utftext;
+            } // End Function _utf8_encode
+
+            // private method for UTF-8 decoding
+            ,_utf8_decode: function (utftext)
+            {
+                var string = "";
+                var i = 0;
+                var c, c1, c2, c3;
+                c = c1 = c2 = 0;
+
+                while (i < utftext.length)
+                {
+                    c = utftext.charCodeAt(i);
+
+                    if (c < 128)
+                    {
+                        string += String.fromCharCode(c);
+                        i++;
+                    }
+                    else if ((c > 191) && (c < 224))
+                    {
+                        c2 = utftext.charCodeAt(i + 1);
+                        string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                        i += 2;
+                    }
+                    else
+                    {
+                        c2 = utftext.charCodeAt(i + 1);
+                        c3 = utftext.charCodeAt(i + 2);
+                        string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                        i += 3;
+                    }
+
+                } // Whend
+
+                return string;
+            } // End Function _utf8_decode
+
+        }
+
+        function getFilename(path, current_path) {
+            if(current_path === "$HOME") {
+                return path;
+            }
+            let res = path.substring(current_path.length);
+            if(res[0] === '/')
+                res = res.substring(1);
+            return res;
+        }
+        function timeConverter(UNIX_timestamp){
+            const date = new Date(UNIX_timestamp);
+            // getMonth start from 0
+            return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getUTCFullYear()+ ' ' + date.getHours() + ':' + date.getUTCMinutes() + ':' + date.getUTCSeconds() ;
+        }
+        // source: https://web.archive.org/web/20120507054320/http://codeaid.net/javascript/convert-size-in-bytes-to-human-readable-format-(javascript)
+        function bytesToSize(bytes) {
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 Byte';
+            const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+        }
+        function itemToBadges(item) {
+            const badges = {
+                'filetype': '<span class="badge badge-filetype">{{file_type}}</span>',
+                'readable': '<span class="badge badge-readable">Readable</span>',
+                'writeable': '<span class="badge badge-writeable">Writeable</span>',
+                'hidden': '<span class="badge badge-hidden">Hidden</span>',
+                'executable': '<span class="badge badge-executable">Executable</span>',
+            };
+            let result = '';
+            if(item.file_type !== null && item.file_type.length > 0) {
+                result += badges['filetype'].replace("{{file_type}}", item.file_type) + ' ';
+            }
+            else {
+                result += badges['filetype'].replace("{{file_type}}", "Directory") + ' ';
+            }
+            if(item.readable) {
+                result += badges['readable'] + ' ';
+            }
+            if(item.writeable) {
+                result += badges['writeable'] + ' ';
+            }
+            if(item.executable && item.isFile) {
+                result += badges['executable'] + ' ';
+            }
+            if(item.isHidden) {
+                result += badges['hidden'];
+            }
+            return result;
+        }
+        function getCurrentPath() {
+            return document.querySelector(".path-nav").innerText;
+        }
+        function navigateTo(path) {
+            FreezeUI();
+            // TODO:  something happens and it adds double slash so i need to fix it this is a temp fix
+            path = path.replace("//", "/");
+            document.querySelector(".path-nav").innerText = path;
+            // path_navigator_tracker();
+            init_nav_tracker();
+            httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
+                loadFiles(data);
+            }, { 'action': 'ls', 'path': path});
+        }
+
+        function loadFiles(files) {
+            hideFileDisplay();
+            showFilesTable();
+            files_table_tbody.innerHTML = '';
+            files.forEach(function(item) {
+                var row = files_table_tbody.insertRow();
+                if(item.file_type !== null && item.file_type.length > 0) {
+                    row.insertCell(0).innerHTML = `<span class="navigate" data-path="${item.path}" data-filetype="${item.file_type}">${getFilename(item.path, getCurrentPath())}</a>`;
+                }
+                else {
+                    row.insertCell(0).innerHTML = `<span class="navigate" data-path="${item.path}" data-filetype="directory">${getFilename(item.path, getCurrentPath())}</a>`;
+                }
+                row.insertCell(1).innerHTML = timeConverter(parseInt(item.lastModified));
+                row.insertCell(2).innerHTML = bytesToSize(parseInt(item.size));
+                var badges = row.insertCell(3);
+                badges.className = 'text-center';
+                badges.innerHTML = itemToBadges(item);
+                var actions = row.insertCell(4);
+                actions.className = 'text-center';
+                actions.innerHTML = `
                         <ul class="table-controls">
                             <li><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="download-icon download-file" data-path="${item.path}"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></a></li>
 </ul>`;
-                });
-                UnFreezeUI();
-            }
+            });
+            UnFreezeUI();
+        }
 
-            function find_files(query) {
-                httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
-                    loadFiles(data);
-                }, { 'action': 'find', 'path': getCurrentPath(), 'query': query });
-            }
+        function find_files(query) {
+            httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
+                loadFiles(data);
+            }, { 'action': 'find', 'path': getCurrentPath(), 'query': query });
+        }
 
-            function hideFileDisplay() {
-                document.querySelector(".file-box").classList.add("hide");
-                document.querySelector(".text").innerHTML = '';
-            }
-            function hideFilesTable() {
-                document.querySelector(".files > table").classList.add("hide");
-            }
+        function hideFileDisplay() {
+            document.querySelector(".file-box").classList.add("hide");
+            document.querySelector(".text").innerHTML = '';
+        }
+        function hideFilesTable() {
+            document.querySelector(".files > table").classList.add("hide");
+        }
 
-            function showFileDisplay() {
-                document.querySelector(".file-box").classList.remove("hide");
-            }
-            function showFilesTable() {
-                document.querySelector(".files > table").classList.remove("hide");
-            }
+        function showFileDisplay() {
+            document.querySelector(".file-box").classList.remove("hide");
+        }
+        function showFilesTable() {
+            document.querySelector(".files > table").classList.remove("hide");
+        }
 
-            function isJson(content) {
-                try {
-                    const obj = JSON.parse(content);
-                    if (obj && typeof obj === "object") {
-                        return true;
-                    }
+        function isJson(content) {
+            try {
+                const obj = JSON.parse(content);
+                if (obj && typeof obj === "object") {
+                    return true;
                 }
-                catch (e) { }
+            }
+            catch (e) { }
+            return false;
+        }
+        function dbQuery(path, query) {
+            httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
+                return data;
+            }, { 'action': 'database', 'path': path, 'query': query});
+        }
+        function loadFile(filepath, type) {
+            if(type === "empty") {
                 return false;
             }
-            function dbQuery(path, query) {
+            else if(type === "sqlite") {
                 httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
-                    return data;
-                }, { 'action': 'database', 'path': path, 'query': query});
-            }
-            function loadFile(filepath, type) {
-                if(type === "empty") {
-                    return false;
-                }
-                else if(type === "sqlite") {
-                    httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
-                        hideFilesTable();
-                        document.querySelector(".file-box-name").innerText = getFilename(filepath, getCurrentPath());
-                        let db_tables = data.slice(1).map(x => x[0]) // avoid columns row
-                        let select_table_element = document.createElement("select");
-                        select_table_element.setAttribute("style", "width:90%; margin-bottom: 15px;");
-                        db_tables.forEach(function(table_name) {
-                            let select_table_option_element = document.createElement("option");
-                            select_table_option_element.setAttribute("value", table_name);
-                            select_table_option_element.innerText = table_name;
-                            select_table_element.appendChild(select_table_option_element);
-                        });
+                    hideFilesTable();
+                    document.querySelector(".file-box-name").innerText = getFilename(filepath, getCurrentPath());
+                    let db_tables = data.slice(1).map(x => x[0]) // avoid columns row
+                    let select_table_element = document.createElement("select");
+                    select_table_element.setAttribute("style", "width:90%; margin-bottom: 15px;");
+                    db_tables.forEach(function(table_name) {
+                        let select_table_option_element = document.createElement("option");
+                        select_table_option_element.setAttribute("value", table_name);
+                        select_table_option_element.innerText = table_name;
+                        select_table_element.appendChild(select_table_option_element);
+                    });
 
-                        let query_input_element = document.createElement("input");
-                        query_input_element.setAttribute("type", "search");
-                        query_input_element.setAttribute("style", "width:79%; margin-right: 5px;");
-                        query_input_element.classList.add("query-box");
+                    let query_input_element = document.createElement("input");
+                    query_input_element.setAttribute("type", "search");
+                    query_input_element.setAttribute("style", "width:79%; margin-right: 5px;");
+                    query_input_element.classList.add("query-box");
+                    query_input_element.value = `SELECT * FROM ${select_table_element.value} LIMIT 0,10`;
+
+                    let exec_query_element = document.createElement("input");
+                    exec_query_element.setAttribute("type", "button");
+                    exec_query_element.setAttribute("data-filepath", filepath);
+                    exec_query_element.setAttribute("style", "width: 11%;");
+                    exec_query_element.value = "Execute";
+
+                    select_table_element.addEventListener("change", event => {
                         query_input_element.value = `SELECT * FROM ${select_table_element.value} LIMIT 0,10`;
+                    });
+                    exec_query_element.addEventListener("click", event => {
+                        let info_text_table = document.querySelector(".text > table");
+                        if(info_text_table !== null)
+                            info_text_table.remove();
+                        httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
+                            let db_columns = data[0];
+                            let db_rows = data.slice(1);
+                            let table_element = document.createElement("table");
+                            table_element.classList.add("db-table");
+                            let table_thead_element = document.createElement("thead");
+                            let table_thead_tr_element = document.createElement("tr");
+                            let table_tbody_element = document.createElement("tbody");
+                            db_columns.forEach(function(column_name) {
+                                let th_element = document.createElement("th");
+                                th_element.innerText = column_name;
+                                table_thead_tr_element.appendChild(th_element);
+                            });
+                            table_thead_element.appendChild(table_thead_tr_element);
+                            table_element.appendChild(table_thead_element);
 
-                        let exec_query_element = document.createElement("input");
-                        exec_query_element.setAttribute("type", "button");
-                        exec_query_element.setAttribute("data-filepath", filepath);
-                        exec_query_element.setAttribute("style", "width: 11%;");
-                        exec_query_element.value = "Execute";
-
-                        select_table_element.addEventListener("change", event => {
-                            query_input_element.value = `SELECT * FROM ${select_table_element.value} LIMIT 0,10`;
-                        });
-                        exec_query_element.addEventListener("click", event => {
-                            let info_text_table = document.querySelector(".text > table");
-                            if(info_text_table !== null)
-                                info_text_table.remove();
-                            httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
-                                let db_columns = data[0];
-                                let db_rows = data.slice(1);
-                                let table_element = document.createElement("table");
-                                table_element.classList.add("db-table");
-                                let table_thead_element = document.createElement("thead");
-                                let table_thead_tr_element = document.createElement("tr");
-                                let table_tbody_element = document.createElement("tbody");
-                                db_columns.forEach(function(column_name) {
-                                    let th_element = document.createElement("th");
-                                    th_element.innerText = column_name;
-                                    table_thead_tr_element.appendChild(th_element);
+                            db_rows.forEach(function(row) {
+                                let table_tbody_tr_element = document.createElement("tr");
+                                row.forEach(function(value) {
+                                    let td_element = document.createElement("td");
+                                    td_element.innerText = value;
+                                    table_tbody_tr_element.appendChild(td_element);
                                 });
-                                table_thead_element.appendChild(table_thead_tr_element);
-                                table_element.appendChild(table_thead_element);
+                                table_tbody_element.appendChild(table_tbody_tr_element);
+                            });
+                            table_element.appendChild(table_tbody_element);
+                            document.querySelector(".text").appendChild(table_element);
+                        }, { 'action': 'database', 'path': exec_query_element.getAttribute("data-filepath"), 'query': query_input_element.value});
+                    });
+                    document.querySelector(".text").appendChild(select_table_element);
+                    document.querySelector(".text").appendChild(query_input_element);
+                    document.querySelector(".text").appendChild(exec_query_element);
+                    exec_query_element.click();
+                    showFileDisplay();
+                }, { 'action': 'database', 'path': filepath, 'query': "select name from sqlite_master where type='table'"});
 
-                                db_rows.forEach(function(row) {
-                                    let table_tbody_tr_element = document.createElement("tr");
-                                    row.forEach(function(value) {
-                                        let td_element = document.createElement("td");
-                                        td_element.innerText = value;
-                                        table_tbody_tr_element.appendChild(td_element);
-                                    });
-                                    table_tbody_element.appendChild(table_tbody_tr_element);
-                                });
-                                table_element.appendChild(table_tbody_element);
-                                document.querySelector(".text").appendChild(table_element);
-                            }, { 'action': 'database', 'path': exec_query_element.getAttribute("data-filepath"), 'query': query_input_element.value});
-                        });
-                        document.querySelector(".text").appendChild(select_table_element);
-                        document.querySelector(".text").appendChild(query_input_element);
-                        document.querySelector(".text").appendChild(exec_query_element);
-                        exec_query_element.click();
-                        showFileDisplay();
-                    }, { 'action': 'database', 'path': filepath, 'query': "select name from sqlite_master where type='table'"});
-
-                }
-                else {
-                    FreezeUI();
-                    fetch(`/api/device/${device_id}/package/${package_identifier}`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({'action': 'read', 'path': filepath})
-                    })
-                        .then(
-                            function (response) {
-                                if (response.status !== 200) {
-                                    console.log('Looks like there was a problem. Status Code: ' +
-                                        response.status);
-                                    return;
-                                }
-
-                                // Examine the text in the response
-                                response.json().then(function (data) {
-                                    UnFreezeUI();
-                                    hideFilesTable();
-                                    document.querySelector(".file-box-name").innerText = data.filename;
-                                    let pre_element = document.createElement("pre");
-                                    pre_element.classList.add("scrollable"); // info-text
-                                    if (type === "xml") {
-                                        pre_element.classList.add("text-align-left");
-                                        pre_element.innerText = vkbeautify.xml(data.content);
-                                    }
-                                    else if (type === "data" && isJson(data.content)) {
-                                        pre_element.classList.add("text-align-left");
-                                        pre_element.innerText = vkbeautify.json(data.content);
-                                    }
-                                    else if(type.startsWith("image")) {
-                                        pre_element.innerHTML = `<img src="data:${type};base64,${btoa(data.content)}" alt="" />`;
-                                    }
-                                    else if(/^[ -~\t\n\r]+$/.test(data.content)) { // check if content is printable
-                                        // pre_element.classList.add("text-align-left");
-                                        pre_element.innerHTML = data.content;
-                                    }
-                                    else {
-                                        pre_element.innerText = hexdump(data.content);
-                                    }
-                                    document.querySelector(".text").appendChild(pre_element);
-                                    showFileDisplay();
-                                });
-                            }
-                        )
-                        .catch(function (err) {
-                            console.log('Fetch Error :-S', err);
-                        });
-                }
             }
-            function download(filename, text) {
-                const element = document.createElement('a');
-                element.setAttribute('href', 'data:application/octet-stream;base64,' + btoa(text));
-                element.setAttribute('download', filename);
-
-                element.style.display = 'none';
-                document.body.appendChild(element);
-
-                element.click();
-
-                document.body.removeChild(element);
-            }
-
-            function download_file(filepath) {
+            else {
                 FreezeUI();
-                fetch(`/api/device/${device_id}/package/${package_identifier}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ 'action': 'read', 'path': filepath})})
+                fetch(`/api/device/${device_id}/package/${package_identifier}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({'action': 'read', 'path': filepath})
+                })
                     .then(
-                        function(response) {
+                        function (response) {
                             if (response.status !== 200) {
                                 console.log('Looks like there was a problem. Status Code: ' +
                                     response.status);
@@ -284,120 +391,183 @@
                             }
 
                             // Examine the text in the response
-                            response.json().then(function(data) {
+                            response.json().then(function (data) {
                                 UnFreezeUI();
-                                download(data.filename, data.content);
+                                hideFilesTable();
+                                document.querySelector(".file-box-name").innerText = data.filename;
+                                let pre_element = document.createElement("pre");
+                                pre_element.classList.add("scrollable"); // info-text
+                                if (type === "xml") {
+                                    pre_element.classList.add("text-align-left");
+                                    pre_element.innerText = vkbeautify.xml(data.content);
+                                }
+                                else if (type === "data" && isJson(data.content)) {
+                                    pre_element.classList.add("text-align-left");
+                                    pre_element.innerText = vkbeautify.json(data.content);
+                                }
+                                else if(type.startsWith("image")) {
+                                    pre_element.innerHTML = `<img src="data:${type};base64,${btoa(data.content)}" alt="" />`;
+                                }
+                                else if(/^[ -~\t\n\r]+$/.test(data.content)) { // check if content is printable
+                                    // pre_element.classList.add("text-align-left");
+                                    pre_element.innerHTML = data.content;
+                                }
+                                else {
+                                    pre_element.innerText = hexdump(data.content);
+                                }
+                                document.querySelector(".text").appendChild(pre_element);
+                                showFileDisplay();
                             });
                         }
                     )
-                    .catch(function(err) {
+                    .catch(function (err) {
                         console.log('Fetch Error :-S', err);
                     });
             }
+        }
+        function download(filename, text) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:application/octet-stream;base64,' + Base64.encode(text));
+            element.setAttribute('download', filename);
 
-            window.onload = function() {
+            element.style.display = 'none';
+            document.body.appendChild(element);
 
-                let search_box = document.querySelector(".search-box");
-                files_table_tbody = document.querySelector(".files > table > tbody");
-                document.querySelector("body").addEventListener("click", event => {
-                    if (event.target.classList.contains('navigate')) {
-                        if(event.target.getAttribute("data-filetype") !== "directory") {
-                            loadFile(event.target.getAttribute("data-path"), event.target.getAttribute("data-filetype"));
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        function download_file(filepath) {
+            FreezeUI();
+            fetch(`/api/device/${device_id}/package/${package_identifier}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ 'action': 'read', 'path': filepath})})
+                .then(
+                    function(response) {
+                        if (response.status !== 200) {
+                            console.log('Looks like there was a problem. Status Code: ' +
+                                response.status);
+                            return;
                         }
-                        else {
-                            search_box.value = '';
-                            navigateTo(event.target.getAttribute("data-path"));
-                        }
+
+                        // Examine the text in the response
+                        response.json().then(function(data) {
+                            UnFreezeUI();
+                            download(data.filename, data.content);
+                        });
                     }
-                    if (event.target.classList.contains('download-file')) {
-                        download_file(event.target.getAttribute("data-path"));
-                    }
+                )
+                .catch(function(err) {
+                    console.log('Fetch Error :-S', err);
                 });
-                search_box.addEventListener("change", event=> {
-                    if(search_box.value.length > 0) {
-                        find_files(search_box.value);
+        }
+
+        window.onload = function() {
+
+            let search_box = document.querySelector(".search-box");
+            files_table_tbody = document.querySelector(".files > table > tbody");
+            document.querySelector("body").addEventListener("click", event => {
+                if (event.target.classList.contains('navigate')) {
+                    if(event.target.getAttribute("data-filetype") !== "directory") {
+                        loadFile(event.target.getAttribute("data-path"), event.target.getAttribute("data-filetype"));
                     }
                     else {
-                        navigateTo(getCurrentPath());
-                    }
-                });
-                document.querySelector(".skip-back-icon").addEventListener("click", event=> {
-                    hideFileDisplay();
-                    showFilesTable();
-                });
-                httpRequest(`/api/device/${device_id}`, function(data) {
-                    document.querySelector(".header").innerText = document.querySelector(".header").innerText.replace('{{device_name}}', data.device.name);
-                    document.querySelector(".current_path").innerHTML = document.querySelector(".current_path").innerHTML.replace('{{device_id}}', data.device.id);
-                });
-                httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
-                    console.log("package:", data);
-                    document.querySelector(".header").innerText = document.querySelector(".header").innerText.replace('{{package_name}}', data.package_name);
-                    document.querySelector(".header").innerText = document.querySelector(".header").innerText.replace('{{package_version}}', data.package_version);
-                    navigateTo(data.data_directory);
-                }, { 'action': 'package_info'});
-            };
-            window.onkeydown = function(keyboard_event) {
-                if (keyboard_event.ctrlKey && keyboard_event.keyCode === 71){ //CTRL+ALT+F4
-                    let newDirectory = prompt("Jump to directory...", getCurrentPath());
-                    if(newDirectory) {
-                        navigateTo(newDirectory);
+                        search_box.value = '';
+                        navigateTo(event.target.getAttribute("data-path"));
                     }
                 }
-            };
-        </script>
-        <style>
-            .search {
-                display: block;
+                if (event.target.classList.contains('download-file')) {
+                    download_file(event.target.getAttribute("data-path"));
+                }
+            });
+            search_box.addEventListener("change", event=> {
+                if(getCurrentPath() === '$HOME') {
+                    return;
+                }
+                else if(search_box.value.length > 0) {
+                    find_files(search_box.value);
+                }
+                else {
+                    navigateTo(getCurrentPath());
+                }
+            });
+            document.querySelector(".skip-back-icon").addEventListener("click", event=> {
+                hideFileDisplay();
+                showFilesTable();
+            });
+            httpRequest(`/api/device/${device_id}`, function(data) {
+                document.querySelector(".header").innerText = document.querySelector(".header").innerText.replace('{{device_name}}', data.device.name);
+                document.querySelector(".current_path").innerHTML = document.querySelector(".current_path").innerHTML.replace('{{device_id}}', data.device.id);
+            });
+            httpRequest(`/api/device/${device_id}/package/${package_identifier}`, function(data) {
+                document.querySelector(".header").innerText = document.querySelector(".header").innerText.replace('{{package_name}}', data.package_name);
+                document.querySelector(".header").innerText = document.querySelector(".header").innerText.replace('{{package_version}}', data.package_version);
+                document.querySelector(".path-nav").innerText = "$HOME";
+                loadFiles(data.directories);
+                // navigateTo(data.data_directory);
+            }, { 'action': 'package_info'});
+        };
+        window.onkeydown = function(keyboard_event) {
+            if (keyboard_event.ctrlKey && keyboard_event.keyCode === 71) {
+                let newDirectory = prompt("Jump to directory...", getCurrentPath());
+                if(newDirectory) {
+                    navigateTo(newDirectory);
+                }
             }
-        </style>
-    </head>
-    <body>
-        <div class="main_container">
-            <div class="header">{{device_name}} - {{package_name}} ({{package_version}})</div>
-            <div class="text-center">
-                <div class="icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-package"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                </div>
-            </div>
-            <div class="current_path">{{device_id}}:<span class="path_nav">{{path_nav}}</span></div>
-            <div class="files">
-                <div class="search">
-                    <label>
-                        <input type="search" placeholder="Search..." class="search-box" />
-                    </label>
-                </div>
-                <div class="file-box center clear hide">
-                    <div class="box" style="width: 90%; height: auto;">
-                        <div class="skip-back-icon icon">
-                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="text-info"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
-                        </div>
-                        <div class="icon">
-                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                        </div>
-                        <h5 class="heading file-box-name">{{filename}}</h5>
-                        <div class="text">
-                            <table class="dbTable hide">
-                            </table>
-
-                            <pre class="scrollable file-box-content"></pre>
-                        </div>
-                    </div>
-                </div>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Filename</th>
-                        <th>Last modified</th>
-                        <th>Size</th>
-                        <th class="text-center">Flags</th>
-                        <th></th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-            <div class="footer-text">Made with <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> by <a href="https://github.com/0x742" target="_blank">Raz</a></div>
+        };
+    </script>
+    <style>
+        .search {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="main_container">
+    <div class="header">{{device_name}} - {{package_name}} ({{package_version}})</div>
+    <div class="text-center">
+        <div class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-package"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
         </div>
-    </body>
+    </div>
+    <div class="current_path">{{device_id}}:<span class="path-nav">{{path_nav}}</span></div>
+    <div class="files">
+        <div class="search">
+            <label>
+                <input type="search" placeholder="Search..." class="search-box" />
+            </label>
+        </div>
+        <div class="file-box center clear hide">
+            <div class="box" style="width: 90%; height: auto;">
+                <div class="skip-back-icon icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="text-info"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                </div>
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                </div>
+                <h5 class="heading file-box-name">{{filename}}</h5>
+                <div class="text">
+                    <table class="dbTable hide">
+                    </table>
+
+                    <pre class="scrollable file-box-content"></pre>
+                </div>
+            </div>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Last modified</th>
+                <th>Size</th>
+                <th class="text-center">Flags</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <div class="footer-text">Made with <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> by <a href="https://github.com/0x742" target="_blank">Raz</a></div>
+</div>
+</body>
 </html>

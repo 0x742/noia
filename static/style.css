@@ -69,7 +69,7 @@ input[type=button] {
   padding-bottom: 15px;
 }
 
-.path_nav:hover,
+.path-nav:hover,
 .download-file:hover,
 .delete-file:hover {
   cursor: pointer;

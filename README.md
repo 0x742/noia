@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/noia.svg)](https://badge.fury.io/js/noia)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Noia is a web-based tool whose main aim is to ease the process of browsing an Android application sandbox and directly previewing SQLite databases, images, and more. Powered by [frida.re](https://www.frida.re).
+Noia is a web-based tool whose main aim is to ease the process of browsing mobile applications sandbox and directly previewing SQLite databases, images, and more. Powered by [frida.re](https://www.frida.re).
 
 Please note that I'm not a programmer, but I'm probably above the median in code-savyness. Try it out, open an issue if you find any problems. PRs are welcome.
 
@@ -28,9 +28,11 @@ noia
 
 * Download the application files and directories for further analysis.
 
+* Basic iOS support
+
 and more :sunglasses:
 
-![General](static/screenshot.png)
+![General](static/demo.gif)
 
 ## Setup
 
@@ -51,12 +53,15 @@ Noia is powered by [frida.re](https://www.frida.re), thus requires Frida to run.
 
 #### Rooted Device
 
-See https://www.frida.re/docs/android/
+See:
+* https://frida.re/docs/android/
+* https://frida.re/docs/ios/
 
 #### Non-rooted Device
 
 * https://koz.io/using-frida-on-android-without-root/
 * https://github.com/sensepost/objection/wiki/Patching-Android-Applications
+* https://nowsecure.com/blog/2020/01/02/how-to-conduct-jailed-testing-with-frida/
 
 **Security Warning**
 

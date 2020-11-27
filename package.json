@@ -1,11 +1,13 @@
 {
   "name": "noia",
-  "version": "1.0.0",
-  "description": "Simple Android application sandbox file browser tool to directly preview SQLite databases, images, XML files and more. Powered by [frida.re](https://www.frida.re).",
+  "version": "1.0.3",
+  "description": "Simple mobile applications sandbox file browser tool to directly preview SQLite databases, images, XML files and more. Powered by [frida.re](https://www.frida.re).",
   "main": "app.js",
   "bin": "cli.js",
   "keywords": [
     "Android",
+    "iOS",
+    "Security",
     "frida"
   ],
   "dependencies": {
@@ -14,7 +16,7 @@
     "ejs": "^3.0.2",
     "express": "^4.17.1",
     "file-type": "^14.1.4",
-    "frida": "^12.8.19",
+    "frida": "^14.0.8",
     "frida-compile": "^9.3.0",
     "frida-fs": "^3.0.1",
     "mustache": "^4.0.1",

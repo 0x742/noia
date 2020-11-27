@@ -29,6 +29,10 @@ app.get('/', async function(req, res) {
 	res.render('devices')
 });
 
+app.get('/package-home', async function(req, res) {
+	res.render('home')
+});
+
 app.get('/device/:device/packages', async function(req, res) {
 	const device_id = req.params.device;
 	res.render('apps', { device_id: device_id })
@@ -143,13 +147,8 @@ async function get_frida_script(device_id, package_identifier, res) {
 			session = await device.attach(package_identifier);
 		}
 		catch(e) {
-			try {
-				pid = await device.spawn(package_identifier);
-				session = await device.attach(pid);
-			}
-			catch(e) {
-				return {"error": e.message};
-			}
+			pid = await device.spawn(package_identifier);
+			session = await device.attach(pid);
 		}
 		const script = await session.createScript(source);
 		script.message.connect(onMessage);
@@ -183,7 +182,7 @@ async function find(ls_func, readFile_func, path, query) {
 			file["file_type"] = "data";
 			if(readFile_func !== null) {
 				let fileContent = await readFile_func(file.path, 0x100); // partly read for detecting file type
-				let file_type = await FileType.fromBuffer(new Uint8Array(fileContent.data));
+				let file_type = await FileType.fromBuffer(new Uint8Array(fileContent));
 				if (file_type !== undefined) {
 					file["file_type"] = file_type.mime.startsWith("image") ? file_type.mime : file_type.ext;
 				}
@@ -217,7 +216,7 @@ async function handle_command(device_id, identifier, action, params, frida_scrip
 			if (file.isFile && file.size > 0) {
 				file["file_type"] = "data";
 				let fileContent = await frida_script.exports.readFile(file.path, 0x100); // partly read for detecting file type
-				let file_type = await FileType.fromBuffer(fileContent);
+				let	file_type = await FileType.fromBuffer(fileContent);
 				if (file_type !== undefined) {
 					file["file_type"] = file_type.mime.startsWith("image") ? file_type.mime : file_type.ext;
 				}
